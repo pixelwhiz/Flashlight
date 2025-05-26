@@ -10,11 +10,17 @@ import cn.nukkit.math.BlockVector3;
 import cn.nukkit.network.protocol.UpdateBlockPacket;
 import cn.nukkit.scheduler.Task;
 import dev.pixelwhiz.Flashlight;
+import dev.pixelwhiz.listener.InventoryListener;
 import dev.pixelwhiz.utils.LightLevelCalculator;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class FlashlightTask extends Task {
 
     public Flashlight plugin;
+
+    private final Map<Player, InventoryListener> listeners = new HashMap<>();
 
     private int lightLevel = 0;
     private Position pos = null;
@@ -30,13 +36,20 @@ public class FlashlightTask extends Task {
     public void onRun(int currentTick) {
         for (Player player : Server.getInstance().getOnlinePlayers().values()) {
 
+            if (!listeners.containsKey(player)) {
+                InventoryListener listener = new InventoryListener(this);
+                player.getInventory().addListener(listener);
+                player.getOffhandInventory().addListener(listener);
+                listeners.put(player, listener);
+            }
+
             if (this.requireLightLevelUpdate) {
                 this.setLightLevel(Math.max(
                         LightLevelCalculator.calc(player.getInventory().getItemInHand()),
                         LightLevelCalculator.calc(player.getOffhandInventory().getItem(0))
                 ));
 
-                this.requireLightLevelUpdate = true;
+                this.requireLightLevelUpdate = false;
             }
 
             if (this.lightLevel <= 0) {
@@ -50,8 +63,9 @@ public class FlashlightTask extends Task {
                 this.pos = newPos;
                 this.overrideBlock();
             }
-        }
 
+            listeners.keySet().removeIf(p -> !p.isOnline());
+        }
     }
 
     private void restoreBlock() {
@@ -60,6 +74,11 @@ public class FlashlightTask extends Task {
         }
 
         sendBlockLayers(this.pos.getLocation(), this.pos.getLevel().getBlock(this.pos), Block.get(Block.AIR));
+    }
+
+    public void onCancel() {
+        listeners.clear();
+        this.restoreBlock();
     }
 
     private static void sendBlockLayers(Location pos, Block normalLayer, Block liquidLayer) {
@@ -142,7 +161,7 @@ public class FlashlightTask extends Task {
         sendBlockLayers(this.pos.getLocation(), normalLayer, liquidLayer);
     }
 
-    private void requestLightLevelUpdate() {
+    public void requestLightLevelUpdate() {
         this.requireLightLevelUpdate = true;
     }
 
@@ -153,6 +172,7 @@ public class FlashlightTask extends Task {
         }
 
         this.lightLevel = newLightLevel;
+        this.overrideBlock();
     }
 
 }

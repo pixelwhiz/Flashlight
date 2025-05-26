@@ -3,6 +3,7 @@ package dev.pixelwhiz.listener;
 import cn.nukkit.Player;
 import cn.nukkit.event.EventHandler;
 import cn.nukkit.event.Listener;
+import cn.nukkit.event.player.PlayerItemHeldEvent;
 import cn.nukkit.event.player.PlayerQuitEvent;
 import dev.pixelwhiz.Flashlight;
 
@@ -14,6 +15,17 @@ public class EventListener implements Listener {
 
     public EventListener(Flashlight plugin) {
         this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onHeld(PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+
+        if (!this.plugin.flashLights.contains(player.getName())) {
+            return;
+        }
+
+        this.plugin.flashLights.add(player.getUniqueId().toString());
     }
 
     @EventHandler
