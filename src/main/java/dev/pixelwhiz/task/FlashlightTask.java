@@ -4,68 +4,61 @@ import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.block.Block;
 import cn.nukkit.block.BlockLiquid;
+import cn.nukkit.item.Item;
 import cn.nukkit.level.Location;
 import cn.nukkit.level.Position;
 import cn.nukkit.math.BlockVector3;
 import cn.nukkit.network.protocol.UpdateBlockPacket;
 import cn.nukkit.scheduler.Task;
-import dev.pixelwhiz.Flashlight;
 import dev.pixelwhiz.listener.InventoryListener;
 import dev.pixelwhiz.utils.LightLevelCalculator;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class FlashlightTask extends Task {
-
-    public Flashlight plugin;
-
-    private final Map<Player, InventoryListener> listeners = new HashMap<>();
 
     private int lightLevel = 0;
     private Position pos = null;
 
-    private boolean requireLightLevelUpdate = false;
+    public Player player;
 
-    public FlashlightTask(Flashlight plugin) {
-        this.plugin = plugin;
+    public boolean requireLightLevelUpdate = false;
+
+    public FlashlightTask(Player player) {
         this.requestLightLevelUpdate();
+        this.player = player;
+
+        InventoryListener listener = new InventoryListener(this);
+        player.getInventory().addListener(listener);
+        player.getOffhandInventory().addListener(listener);
     }
 
     @Override
     public void onRun(int currentTick) {
-        for (Player player : Server.getInstance().getOnlinePlayers().values()) {
-
-            if (!listeners.containsKey(player)) {
-                InventoryListener listener = new InventoryListener(this);
-                player.getInventory().addListener(listener);
-                player.getOffhandInventory().addListener(listener);
-                listeners.put(player, listener);
-            }
-
-            if (this.requireLightLevelUpdate) {
-                this.setLightLevel(Math.max(
-                        LightLevelCalculator.calc(player.getInventory().getItemInHand()),
-                        LightLevelCalculator.calc(player.getOffhandInventory().getItem(0))
-                ));
-
-                this.requireLightLevelUpdate = false;
-            }
-
-            if (this.lightLevel <= 0) {
-                return;
-            }
-
-            Position pos = player.getPosition();
-            Position newPos = Position.fromObject(pos.add(0.5, 1, 0.5).floor(), pos.getLevel());
-            if (this.pos == null || !this.pos.equals(newPos)) {
-                this.restoreBlock();
-                this.pos = newPos;
-                this.overrideBlock();
-            }
-
-            listeners.keySet().removeIf(p -> !p.isOnline());
+        if (this.player.isClosed() || !this.player.isConnected()) {
+            this.getHandler().cancel();
+            return;
         }
+
+        if (this.requireLightLevelUpdate) {
+            this.setLightLevel(Math.max(
+                    LightLevelCalculator.calc(player.getInventory().getItemInHand()),
+                    LightLevelCalculator.calc(player.getOffhandInventory().getItem(0))
+            ));
+
+            this.requireLightLevelUpdate = false;
+        }
+
+        if (this.lightLevel <= 0) {
+            return;
+        }
+
+        Position pos = player.getPosition();
+        Position newPos = Position.fromObject(pos.add(0.5, 1, 0.5).floor(), pos.getLevel());
+        if (this.pos == null || !this.pos.equals(newPos)) {
+            this.restoreBlock();
+            this.pos = newPos;
+            this.overrideBlock();
+        }
+
     }
 
     private void restoreBlock() {
@@ -77,7 +70,6 @@ public class FlashlightTask extends Task {
     }
 
     public void onCancel() {
-        listeners.clear();
         this.restoreBlock();
     }
 
@@ -150,15 +142,19 @@ public class FlashlightTask extends Task {
             return;
         }
 
-        Block normalLayer = this.pos.level.getBlock(this.pos);
-        Block liquidLayer = this.getLightLevelBlock(this.lightLevel);
-        if (normalLayer instanceof BlockLiquid) {
-            Block temp = normalLayer;
-            normalLayer = liquidLayer;
-            liquidLayer = temp;
-        }
+        Item handItem = player.getInventory().getItemInHand();
+        Item offHandItem = player.getInventory().getItemInHand();
+        if (handItem.getBlock().getLightLevel() > 0 || offHandItem.getBlock().getLightLevel() > 0) {
+            Block normalLayer = this.pos.level.getBlock(this.pos);
+            Block liquidLayer = this.getLightLevelBlock(this.lightLevel);
+            if (normalLayer instanceof BlockLiquid) {
+                Block temp = normalLayer;
+                normalLayer = liquidLayer;
+                liquidLayer = temp;
+            }
 
-        sendBlockLayers(this.pos.getLocation(), normalLayer, liquidLayer);
+            sendBlockLayers(this.pos.getLocation(), normalLayer, liquidLayer);
+        }
     }
 
     public void requestLightLevelUpdate() {

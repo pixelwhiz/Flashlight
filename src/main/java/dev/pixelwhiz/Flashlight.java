@@ -5,6 +5,7 @@ import cn.nukkit.item.Item;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
 import dev.pixelwhiz.listener.EventListener;
+import dev.pixelwhiz.listener.InventoryListener;
 import dev.pixelwhiz.task.FlashlightTask;
 import dev.pixelwhiz.utils.LightLevelCalculator;
 
@@ -22,11 +23,6 @@ public class Flashlight extends PluginBase {
         Config config = new Config();
         this.saveDefaultConfig();
         Server.getInstance().getPluginManager().registerEvents(new EventListener(this), this);
-
-        Server.getInstance().getScheduler().scheduleRepeatingTask(
-                new FlashlightTask(this),
-                (int)(this.getConfig().getDouble("update-delay", 0.25) * 20)
-        );
 
         Map<String, Object> itemLightLevels = config.getSection("item-light-levels");
         if (itemLightLevels != null) {
