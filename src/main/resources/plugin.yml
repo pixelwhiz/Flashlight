@@ -1,0 +1,7 @@
+---
+name: Flashlight
+version: 1.0.0
+main: dev.pixelwhiz.Flashlight
+api: 2.0.0
+author: pixelwhiz
+...
