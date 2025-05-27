@@ -5,17 +5,11 @@ import cn.nukkit.item.Item;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
 import dev.pixelwhiz.listener.EventListener;
-import dev.pixelwhiz.listener.InventoryListener;
-import dev.pixelwhiz.task.FlashlightTask;
 import dev.pixelwhiz.utils.LightLevelCalculator;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class Flashlight extends PluginBase {
-
-    public List<String> flashLights = new ArrayList<>();
 
     @Override
     public void onEnable() {

@@ -29,7 +29,7 @@ public class EventListener implements Listener {
         Player player = event.getPlayer();
         TaskHandler handler = tasks.get(player);
 
-        if (handler != null && plugin.flashLights.contains(player.getName())) {
+        if (handler != null) {
             Runnable task = this.tasks.get(player).getTask();
             ((FlashlightTask) task).requestLightLevelUpdate();
         }
